@@ -4,3 +4,7 @@ tensorflow
 numpy
 scikit-learn
 pillow
+chromadb
+fastapi
+uvicorn[standard]
+sentence-transformers
