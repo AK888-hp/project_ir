@@ -1,0 +1,89 @@
+# ----------------------------------------------------------------
+# .gitignore for Python AI Service
+# ----------------------------------------------------------------
+
+# 1. Virtual Environments
+# Never commit your environment folders
+venv/
+.venv/
+env/
+ENV/
+
+# 2. Python Cache & Compiled Files
+# These are generated automatically
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 3. AI / Machine Learning Models
+# Trained models are typically large and should not be in Git.
+# Use Git LFS or a model registry if you must track them.
+*.h5
+*.hdf5
+*.pth
+*.pt
+*.pb
+*.onnx
+*.safetensors
+*.model
+*.pkl
+*.joblib
+
+# 4. Large Data Files
+# Raw datasets, processed data, and embeddings should be ignored.
+# Add your specific data folders or file types here.
+data/
+datasets/
+*.csv
+*.json
+*.parquet
+*.npy
+*.npz
+chroma_db/
+dataset/
+*.pyc
+
+# 5. Notebooks & Checkpoints
+# Ignore the runtime checkpoints for Jupyter notebooks.
+.ipynb_checkpoints
+.jupyter/
+
+# 6. Environment & Secret Files
+# CRITICAL: Never commit API keys, passwords, or secrets.
+.env
+.env.*
+secrets.toml
+*.ini
+*.cfg
+
+# 7. IDE & Editor-Specific Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# 8. Build, Distribution & Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+MANIFEST
+
+# 9. Logs & Reports
+*.log
+*.logs
+logs/
+*.xml
+*.csv.zip
+*.out
+
+# 10. Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
