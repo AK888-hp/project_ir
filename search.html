@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Search Page</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
+        .container { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1); padding: 24px; width: 90%; max-width: 800px; margin: auto; text-align: center; }
+        .tab-buttons { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab-button { padding: 10px 20px; cursor: pointer; font-size: 18px; font-weight: 500; border: none; background-color: transparent; color: #606770; }
+        .tab-button.active { color: #00A9A5; border-bottom: 3px solid #00A9A5; } /* Changed Color */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        h1 { color: #00A9A5; margin-bottom: 20px; } /* Changed Color */
+        input[type="file"], input[type="text"] { font-size: 16px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; width: calc(100% - 24px); }
+        button { background-color: #00A9A5; color: white; border: none; border-radius: 6px; font-size: 16px; padding: 10px 16px; margin-top: 10px; margin-left: 10px; cursor: pointer; transition: background-color 0.2s; } /* Changed Color */
+        button:hover { background-color: #008B85; } /* Changed Color */
+        .status { margin-top: 20px; font-size: 18px; font-weight: 500; }
+        #image-results { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; text-align: left; }
+        #image-results img { width: 100%; height: auto; border-radius: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+        #text-results { margin-top: 20px; text-align: left; background-color: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 15px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        nav { text-align: center; margin-bottom: 20px; }
+        nav a { font-size: 18px; padding: 10px; text-decoration: none; color: #606770; }
+        nav a b { color: #00A9A5; } /* Changed Color */
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="search.html"><b>Search Page</b></a> | <a href="admin.html">Admin Page</a>
+    </nav>
+    <div class="container">
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('imageSearch')">Image Search</button>
+            <button class="tab-button" onclick="openTab('textSearch')">Text Search</button>
+        </div>
+        <div id="imageSearch" class="tab-content active">
+            <h1>Medical Image Search</h1>
+            <p>Upload a query image to find similar images.</p>
+            <div>
+                <input type="file" id="queryImage" accept="image/png, image/jpeg">
+                <button id="searchImageButton">Search</button>
+            </div>
+            <div id="imageStatus" class="status"></div>
+            <div id="image-results"></div>
+        </div>
+        <div id="textSearch" class="tab-content">
+            <h1>Medical Document Search</h1>
+            <p>Enter a text query to find relevant documents.</p>
+            <div>
+                <input type="text" id="queryText" placeholder="e.g., 'symptoms of fever'">
+                <button id="searchTextButton">Search</button>
+            </div>
+            <div id="textStatus" class="status"></div>
+            <div id="text-results"></div>
+        </div>
+    </div>
+    <script>
+        const IMAGE_SEARCH_API = 'http://localhost:5000/search';
+        const TEXT_SEARCH_API = 'http://localhost:8000/query';
+        const IMAGE_STATIC_URL = 'http://localhost:5000/static';
+        function openTab(tabName) {
+            let i, tabcontent, tabbuttons;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+            tabbuttons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabbuttons.length; i++) { tabbuttons[i].className = tabbuttons[i].className.replace(" active", ""); }
+            document.getElementById(tabName).style.display = "block";
+            event.currentTarget.className += " active";
+        }
+        document.getElementById('searchImageButton').addEventListener('click', async () => {
+            const file = document.getElementById('queryImage').files[0];
+            const status = document.getElementById('imageStatus');
+            const results = document.getElementById('image-results');
+            if (!file) { status.innerText = 'Please select an image first.'; return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            status.innerText = 'Searching for images...';
+            results.innerHTML = '';
+            try {
+                const response = await fetch(IMAGE_SEARCH_API, { method: 'POST', body: formData });
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    status.innerText = `Found ${data.results.length} results:`;
+                    data.results.forEach(path => {
+                        const img = document.createElement('img');
+                        img.src = `${IMAGE_STATIC_URL}/${path.replace(/\\/g, '/')}`; // Fix Windows paths
+                        results.appendChild(img);
+                    });
+                } else { status.innerText = 'No image results found.'; }
+            } catch (error) { console.error('Image Search Error:', error); status.innerText = 'An error occurred.'; }
+        });
+        document.getElementById('searchTextButton').addEventListener('click', async () => {
+            const text = document.getElementById('queryText').value;
+            const status = document.getElementById('textStatus');
+            const results = document.getElementById('text-results');
+            if (!text) { status.innerText = 'Please enter a query first.'; return; }
+            status.innerText = 'Searching for documents...';
+            results.innerHTML = '';
+            try {
+                const response = await fetch(TEXT_SEARCH_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+                if (data.documents && data.documents.length > 0 && data.documents[0].length > 0) {
+                    status.innerText = 'Found results:';
+                    data.documents[0].forEach((doc, i) => {
+                        const dist = data.distances[0][i].toFixed(4);
+                        const el = document.createElement('pre');
+                        el.innerText = `--- Result ${i + 1} (Distance: ${dist}) ---\n${doc}`;
+                        results.appendChild(el);
+                    });
+                } else { status.innerText = 'No text results found.'; }
+            } catch (error) { console.error('Text Search Error:', error); status.innerText = 'An error occurred.'; }
+        });
+    </script>
+</body>
+</html>

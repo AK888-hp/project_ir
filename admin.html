@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
+        .container { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1); padding: 24px; width: 90%; max-width: 800px; margin: 20px auto; }
+        h1, h2 { color: #00A9A5; text-align: center; } /* Changed Color */
+        input[type="text"], textarea { font-size: 16px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; width: calc(100% - 24px); margin-bottom: 10px; }
+        textarea { height: 100px; font-family: inherit; }
+        button { background-color: #42b72a; color: white; border: none; border-radius: 6px; font-size: 16px; padding: 10px 16px; margin-top: 10px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #36a420; }
+        .status { margin-top: 15px; font-size: 16px; font-weight: 500; }
+        nav { text-align: center; margin-bottom: 20px; }
+        nav a { font-size: 18px; padding: 10px; text-decoration: none; color: #606770; }
+        nav a b { color: #00A9A5; } /* Changed Color */
+        .disabled-section { background-color: #f7f7f7; border: 1px dashed #ddd; padding: 20px; border-radius: 8px; text-align: center; color: #606770; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="search.html">Search Page</a> | <a href="admin.html"><b>Admin Page</b></a>
+    </nav>
+    <div class="container">
+        <h2>Add New Text Document</h2>
+        <p>This will add a new text document to your ChromaDB vector database.</p>
+        <input type="text" id="docId" placeholder="Enter a unique ID (e.g., 'doc123')">
+        <textarea id="docText" placeholder="Enter the document text here..."></textarea>
+        <button id="addTextButton">Add Text to Index</button>
+        <div id="textStatus" class="status"></div>
+    </div>
+
+    <div class="container">
+        <h2>Add New Image</h2>
+        <div class="disabled-section">
+            <p>This feature is not supported by your backend.</p>
+            <p>Your <code>app.py</code> server does not have an API endpoint for adding new images to the index. To add new images, you must run the <code>create_index.py</code> script from your terminal and then restart the <code>app.py</code> server.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- API Endpoints for FastAPI (Text) ---
+        const EMBED_API = 'http://localhost:8000/embed';
+        const ADD_INDEX_API = 'http://localhost:8000/add_to_index';
+
+        const addTextButton = document.getElementById('addTextButton');
+        const textStatus = document.getElementById('textStatus');
+
+        addTextButton.addEventListener('click', async () => {
+            const id = document.getElementById('docId').value;
+            const text = document.getElementById('docText').value;
+
+            if (!id || !text) {
+                textStatus.innerText = 'Error: Please provide both an ID and text.';
+                textStatus.style.color = 'red';
+                return;
+            }
+            textStatus.innerText = 'Working... (Step 1: Creating embedding)';
+            textStatus.style.color = 'black';
+            try {
+                // Step 1: Call /embed to get the vector for the text
+                const embedResponse = await fetch(EMBED_API, { // Corrected: EMBED_API
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                if (!embedResponse.ok) throw new Error('Failed to create embedding.');
+                const embedData = await embedResponse.json();
+                const vector = embedData.embedding;
+
+                textStatus.innerText = 'Working... (Step 2: Adding to index)';
+                
+                // Step 2: Call /add_to_index with the ID, text, and vector
+                const addResponse = await fetch(ADD_INDEX_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: id,
+                        vector: vector,
+                        document: text
+                    })
+                });
+                if (!addResponse.ok) throw new Error('Failed to add to index.');
+                const addData = await addResponse.json();
+
+                if (addData.status === 'success') {
+                    textStatus.innerText = `Success! Document added with ID: ${addData.id_added}`;
+                    textStatus.style.color = 'green';
+                    document.getElementById('docId').value = '';
+                    document.getElementById('docText').value = '';
+                } else {
+                    throw new Error('Add to index returned an unknown status.');
+                }
+            } catch (error) {
+                console.error('Error adding document:', error);
+                textStatus.innerText = `Error: ${error.message}`;
+                textStatus.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>

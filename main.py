@@ -2,11 +2,20 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 import chromadb
+from fastapi.middleware.cors import CORSMiddleware
 
 app=FastAPI()
 model = SentenceTransformer('all-MiniLM-L6-v2')
 client = chromadb.PersistentClient(path="./chroma_db")
 collection = client.get_or_create_collection(name = "medical_docs")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 class EmbedRequest(BaseModel):
     text:str
