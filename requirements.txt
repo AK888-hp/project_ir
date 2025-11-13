@@ -1,10 +1,15 @@
+# --- Flask Backend (Image Search) ---
 flask
 flask-cors
 tensorflow
 numpy
 scikit-learn
 pillow
-chromadb
+werkzeug
+
+# --- FastAPI Backend (Text Search) ---
 fastapi
 uvicorn[standard]
+pydantic
 sentence-transformers
+chromadb

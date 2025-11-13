@@ -8,7 +8,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
         .container { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1); padding: 24px; width: 90%; max-width: 800px; margin: 20px auto; }
         h1, h2 { color: #00A9A5; text-align: center; } /* Changed Color */
-        input[type="text"], textarea { font-size: 16px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; width: calc(100% - 24px); margin-bottom: 10px; }
+        input[type="text"], textarea, input[type="file"] { font-size: 16px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; width: calc(100% - 24px); margin-bottom: 10px; }
         textarea { height: 100px; font-family: inherit; }
         button { background-color: #42b72a; color: white; border: none; border-radius: 6px; font-size: 16px; padding: 10px 16px; margin-top: 10px; cursor: pointer; transition: background-color 0.2s; }
         button:hover { background-color: #36a420; }
@@ -34,24 +34,24 @@
 
     <div class="container">
         <h2>Add New Image</h2>
-        <div class="disabled-section">
-            <p>This feature is not supported by your backend.</p>
-            <p>Your <code>app.py</code> server does not have an API endpoint for adding new images to the index. To add new images, you must run the <code>create_index.py</code> script from your terminal and then restart the <code>app.py</code> server.</p>
-        </div>
+        <p>This will save the image to your dataset and add it to the image index.</p>
+        <input type="file" id="imageFile" accept="image/png, image/jpeg">
+        <button id="addImageButton">Add Image to Index</button>
+        <div id="imageStatus" class="status"></div>
     </div>
 
     <script>
-        // --- API Endpoints for FastAPI (Text) ---
+        // --- API Endpoints ---
         const EMBED_API = 'http://localhost:8000/embed';
         const ADD_INDEX_API = 'http://localhost:8000/add_to_index';
+        const UPLOAD_IMAGE_API = 'http://localhost:5000/upload_image'; // <-- 1. NEW API URL
 
+        // --- Text Upload Logic (No changes) ---
         const addTextButton = document.getElementById('addTextButton');
         const textStatus = document.getElementById('textStatus');
-
         addTextButton.addEventListener('click', async () => {
             const id = document.getElementById('docId').value;
             const text = document.getElementById('docText').value;
-
             if (!id || !text) {
                 textStatus.innerText = 'Error: Please provide both an ID and text.';
                 textStatus.style.color = 'red';
@@ -60,8 +60,7 @@
             textStatus.innerText = 'Working... (Step 1: Creating embedding)';
             textStatus.style.color = 'black';
             try {
-                // Step 1: Call /embed to get the vector for the text
-                const embedResponse = await fetch(EMBED_API, { // Corrected: EMBED_API
+                const embedResponse = await fetch(EMBED_API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
@@ -69,22 +68,14 @@
                 if (!embedResponse.ok) throw new Error('Failed to create embedding.');
                 const embedData = await embedResponse.json();
                 const vector = embedData.embedding;
-
                 textStatus.innerText = 'Working... (Step 2: Adding to index)';
-                
-                // Step 2: Call /add_to_index with the ID, text, and vector
                 const addResponse = await fetch(ADD_INDEX_API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: id,
-                        vector: vector,
-                        document: text
-                    })
+                    body: JSON.stringify({ id: id, vector: vector, document: text })
                 });
                 if (!addResponse.ok) throw new Error('Failed to add to index.');
                 const addData = await addResponse.json();
-
                 if (addData.status === 'success') {
                     textStatus.innerText = `Success! Document added with ID: ${addData.id_added}`;
                     textStatus.style.color = 'green';
@@ -97,6 +88,51 @@
                 console.error('Error adding document:', error);
                 textStatus.innerText = `Error: ${error.message}`;
                 textStatus.style.color = 'red';
+            }
+        });
+
+        // --- 2. NEW Image Upload Logic ---
+        const addImageButton = document.getElementById('addImageButton');
+        const imageStatus = document.getElementById('imageStatus');
+        const imageFile = document.getElementById('imageFile');
+
+        addImageButton.addEventListener('click', async () => {
+            const file = imageFile.files[0];
+            if (!file) {
+                imageStatus.innerText = 'Error: Please select an image file first.';
+                imageStatus.style.color = 'red';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file); // 'file' must match the key in app.py
+
+            imageStatus.innerText = 'Working... Uploading and indexing image...';
+            imageStatus.style.color = 'black';
+
+            try {
+                const response = await fetch(UPLOAD_IMAGE_API, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+
+                if (data.status === 'success') {
+                    imageStatus.innerText = `Success! ${data.message}`;
+                    imageStatus.style.color = 'green';
+                    imageFile.value = ''; // Clear the file input
+                } else {
+                    throw new Error(data.error || 'Add to index returned an unknown status.');
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                imageStatus.innerText = `Error: ${error.message}`;
+                imageStatus.style.color = 'red';
             }
         });
     </script>

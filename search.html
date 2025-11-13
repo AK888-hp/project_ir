@@ -59,7 +59,7 @@
     <script>
         const IMAGE_SEARCH_API = 'http://localhost:5000/search';
         const TEXT_SEARCH_API = 'http://localhost:8000/query';
-        const IMAGE_STATIC_URL = 'http://localhost:5000/static';
+        // const IMAGE_STATIC_URL = 'http://localhost:5000/static'; // <-- WE DON'T NEED THIS ANYMORE
         function openTab(tabName) {
             let i, tabcontent, tabbuttons;
             tabcontent = document.getElementsByClassName("tab-content");
@@ -84,14 +84,19 @@
                 const data = await response.json();
                 if (data.results && data.results.length > 0) {
                     status.innerText = `Found ${data.results.length} results:`;
-                    data.results.forEach(path => {
+                    // --- CRITICAL CHANGE ---
+                    data.results.forEach(base64DataUrl => {
                         const img = document.createElement('img');
-                        img.src = `${IMAGE_STATIC_URL}/${path.replace(/\\/g, '/')}`; // Fix Windows paths
+                        // We set the src directly to the data string
+                        img.src = base64DataUrl; 
                         results.appendChild(img);
                     });
+                    // -----------------------
                 } else { status.innerText = 'No image results found.'; }
             } catch (error) { console.error('Image Search Error:', error); status.innerText = 'An error occurred.'; }
         });
+        
+        // --- Text search code (no changes) ---
         document.getElementById('searchTextButton').addEventListener('click', async () => {
             const text = document.getElementById('queryText').value;
             const status = document.getElementById('textStatus');
